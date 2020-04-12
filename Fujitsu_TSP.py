@@ -12,15 +12,15 @@ pi = math.pi
 #%%
 # Prepare for distance matrix and points
 # call distance_mat by distance_mat[start][end] e.g. distance_mat[1][2]
-city_size = 32
-mu, sigma = 0, 100
-X_coordinate = np.random.normal(mu, sigma, city_size)
-Y_coordinate = np.random.normal(mu, sigma, city_size)
-point_idx = np.arange(1,city_size+1,1)
-coordinate = np.array(list(zip(X_coordinate, Y_coordinate)))
-point_df  = pd.DataFrame(coordinate, columns=['xcord', 'ycord'], index=point_idx)
-distance_mat = pd.DataFrame(distance_matrix(point_df.values, point_df.values), index=point_df.index, columns=point_df.index).to_numpy()
-qubits_mat = np.random.binomial(1,0.5, size = city_size**2).reshape((city_size, city_size))
+# city_size = 32
+# mu, sigma = 0, 100
+# X_coordinate = np.random.normal(mu, sigma, city_size)
+# Y_coordinate = np.random.normal(mu, sigma, city_size)
+# point_idx = np.arange(1,city_size+1,1)
+# coordinate = np.array(list(zip(X_coordinate, Y_coordinate)))
+# point_df  = pd.DataFrame(coordinate, columns=['xcord', 'ycord'], index=point_idx)
+# distance_mat = pd.DataFrame(distance_matrix(point_df.values, point_df.values), index=point_df.index, columns=point_df.index).to_numpy()
+# qubits_mat = np.random.binomial(1,0.5, size = city_size**2).reshape((city_size, city_size))
 
 #%%
 # circle version
@@ -34,7 +34,7 @@ Y_coordinate = coordinate[:,1]
 point_idx = np.arange(1,city_size+1,1)
 point_df  = pd.DataFrame(coordinate, columns=['xcord', 'ycord'], index=point_idx)
 distance_mat = pd.DataFrame(distance_matrix(point_df.values, point_df.values), index=point_df.index, columns=point_df.index).to_numpy()
-qubits_mat = np.random.binomial(1,0.5, size = city_size**2).reshape((city_size, city_size))
+qubits_mat = np.random.binomial(1,1, size = city_size**2).reshape((city_size, city_size))
 
 plt.scatter(X_coordinate,Y_coordinate,)
 #%%
@@ -103,30 +103,33 @@ def TSPsolver(city_size, qubits_mat, distance_mat, beta, beta_increment, E_off, 
     # print(flip_array)
     # print(flip_pos)
     
-    return qubits_mat,beta, E_off, flip_count
+    return qubits_mat,beta, E_off, flip_count, np.array(delta_Ei_list)
 
 #%%
 
-max_beta, min_beta, iteration = 5,0.1,10000
+max_beta, min_beta, iteration = 2,0.01,50000
 beta = min_beta
 B = 1
 A = np.max(distance_mat)*B+1
-E_off_increment = 1
+E_off_increment = 5
 beta_increment = (max_beta - min_beta) / iteration
 E_off = 0
 flip_count = 0
 trange = tqdm(range(iteration), total = iteration)
-print((A,B))
+
+total_E = []
+all_delta_Ei = []
 for i in trange:
-    qubits_mat, beta, E_off, flip_count = TSPsolver(city_size,
-                                                    qubits_mat,
-                                                    distance_mat,
-                                                    beta,
-                                                    beta_increment, 
-                                                    E_off, 
-                                                    flip_count,
-                                                    E_off_increment)
+    qubits_mat, beta, E_off, flip_count, delta_Ei_list = TSPsolver(city_size,
+                                                                    qubits_mat,
+                                                                    distance_mat,
+                                                                    beta,
+                                                                    beta_increment, 
+                                                                    E_off, 
+                                                                    flip_count,
+                                                                    E_off_increment)
     a_term,b_term = calculate_E(city_size, qubits_mat, distance_mat, A,B)
+
     trange.set_postfix(Energy = a_term+b_term,
                        one_bits = np.sum(qubits_mat), 
                        beta = beta, 
@@ -135,6 +138,7 @@ for i in trange:
                        Bterm = b_term,
                        flip = flip_count)
 
+    total_E.append(a_term+b_term)
 #%%
 # make plot
 # find city order
@@ -162,4 +166,17 @@ x = [plot_x_set[0],plot_x_set[-1]]
 y = [plot_y_set[0],plot_y_set[-1]]
 plt.plot(x, y, 'k') 
 plt.show()
+# %%
+# show engery trace
+plt.plot(list(range(len(total_E))), np.log(np.array(total_E)).reshape(-1))
+
+# %%
+import pandas as pd
+pd.set_option("display.max_rows", None, "display.max_columns", None)
+df = pd.DataFrame(data=qubits_mat, index=np.arange(32), columns=np.arange(32))
+df
+# %%
+for i in qubits_mat:
+    print(i)
+
 # %%
